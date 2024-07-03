@@ -1,5 +1,10 @@
 web3
-dotenv
+ython-dotenv
 eth_utils
 os
 json
+flask 
+flask_cors
+eth-account 
+eth-utils
+eth-keys 
