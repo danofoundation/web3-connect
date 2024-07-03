@@ -29,6 +29,15 @@ try:
 except Exception as e:
     print(f"Error creating Firestore client: {e}")
 
+walletAddress = '0x12312'
+doc_ref = db.collection('wallets').document()
+doc_ref.set({'wallet_address': walletAddress})
+
+print(doc_ref.id)
+
+
+
+
 infura_url = os.getenv('INFURA_URL')
 
 
