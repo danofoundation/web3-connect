@@ -15,7 +15,6 @@ app.get("/", (req, res) => {
 
 app.get("/nonce", (req, res) => {
   const { walletAddress } = req.query;
-  //NOTE - CAN USE CHAINLINK FOR MORE SECURE RANDOM NUMBER
   const nonce = String(Math.floor(Math.random() * 10000));
   
   nonceList[walletAddress] = nonce;

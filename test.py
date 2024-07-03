@@ -9,7 +9,10 @@ class TestWeb3Connection(unittest.TestCase):
         mock_w3.is_connected.return_value = True
         result = check_web3_connection()
         self.assertTrue(result)
-    
+
+
+
+
 
 if __name__ == '__main__':
     unittest.main()

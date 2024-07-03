@@ -5,6 +5,8 @@ from eth_utils import to_bytes
 from eth_keys import keys
 import random
 import os
+import firebase_admin
+from firebase_admin import credentials, firestore
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 CORS(app) 
@@ -20,7 +22,35 @@ def generate_nonce():
     nonce = str(random.randint(1, 10000))
     nonceList[wallet_address] = nonce
     return jsonify({'nonce': nonce})
+@app.route('/verify')
+def verify_signature():
+    wallet_address = request.args.get('walletAddress')
+    signed_nonce = request.args.get('signedNonce')
+    nonce = nonceList.get(wallet_address)
 
+    if nonce is None:
+        return jsonify({'success': False})
+
+    try:
+        message = encode_defunct(text=nonce)
+        signed_message = keys.Signature(to_bytes(hexstr=signed_nonce))
+        verified_address = signed_message.recover_public_key_from_msg(message).to_checksum_address()
+
+        if wallet_address.lower() == verified_address.lower():
+            # Store wallet address in Firestore
+            doc_ref = db.collection('wallets').document(wallet_address)
+            doc_ref.set({'wallet_address': wallet_address})
+
+            response = make_response(jsonify({'success': True}))
+            response.set_cookie('walletAddress', wallet_address)
+            
+            doc_ref.set(wallet_address)
+            print(doc_ref.id)
+            return response
+        else:
+            raise ValueError('Signature verification failed')
+    except (ValueError, Exception) as e:
+        return jsonify({'success': False, 'error': str(e)})
 @app.route('/verify')
 def verify_signature():
     wallet_address = request.args.get('walletAddress')
