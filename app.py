@@ -76,19 +76,19 @@ def verify_signature():
         
 
 
-# @app.route('/check')
-# def check_session():
-#     wallet_address = request.cookies.get('walletAddress')
-#     if wallet_address:
-#         return jsonify({'success': True, 'walletAddress': wallet_address})
-#     else:
-#         return jsonify({'success': False})
+@app.route('/check')
+def check_session():
+    wallet_address = request.cookies.get('walletAddress')
+    if wallet_address:
+        return jsonify({'success': True, 'walletAddress': wallet_address})
+    else:
+        return jsonify({'success': False})
 
-# @app.route('/logout')
-# def logout():
-#     response = make_response(jsonify({'success': True}))
-#     response.set_cookie('walletAddress', '', expires=0)
-#     return response
+@app.route('/logout')
+def logout():
+    response = make_response(jsonify({'success': True}))
+    response.set_cookie('walletAddress', '', expires=0)
+    return response
 
 if __name__ == '__main__':
     app.run(port=3000)
