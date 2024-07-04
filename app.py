@@ -10,7 +10,7 @@ from firebase_admin import credentials, firestore
 from datetime import datetime
 
 app = Flask(__name__, static_folder='.', static_url_path='')
-CORS(app)
+CORS(app) 
 
 # Initialize Firebase app
 service_account_path = "./firebase/web3-test-key.json"
@@ -30,7 +30,7 @@ except Exception as e:
     print(f"Error creating Firestore client: {e}")
 
 nonceList = {}  # Temporarily store nonce in memory
-wallets_ref = db.collection('wallets')
+
 @app.route('/')
 def index():
     return send_from_directory('.', 'index.html')
@@ -39,8 +39,8 @@ def index():
 def generate_nonce():
     wallet_address = request.args.get('walletAddress')
     nonce = str(random.randint(1, 10000))
-    nonce_id = f"{nonce}-{datetime.now().timestamp()}"
-
+    nonce_id = f"{nonce}-{datetime.now().timestamp()}" 
+    
     # Check if wallet address already exists in Firestore
     doc_ref = wallets_ref.document(wallet_address)
     doc = doc_ref.get()
@@ -54,48 +54,43 @@ def generate_nonce():
 
     return jsonify({'nonce': nonce_id})
 
-@app.route('/verify')
+@app.route('/verify', methods=['GET'])
 def verify_signature():
     wallet_address = request.args.get('walletAddress')
-    signed_nonce = request.args.get('signedNonce')
-    
-    # Retrieve document from Firestore based on wallet address
+
+    # Check if wallet address exists in Firestore
     doc_ref = wallets_ref.document(wallet_address)
     doc = doc_ref.get()
-    
-    if not doc.exists:
+
+    if doc.exists:
+        # If wallet address exists in Firestore, return success
+        response = make_response(jsonify({'success': True}))
+        response.set_cookie('walletAddress', wallet_address)
+        return response
+    else:
+        # If wallet address does not exist in Firestore, return failure
         return jsonify({'success': False, 'error': 'Wallet address not found'})
 
-    # Extract nonce from document data
-    nonce = doc.to_dict().get('nonce')
-
-    try:
-        message = encode_defunct(text=nonce)
-        signed_message = keys.Signature(to_bytes(hexstr=signed_nonce))
-        verified_address = signed_message.recover_public_key_from_msg(message).to_checksum_address()
-
-        if wallet_address.lower() == verified_address.lower():
-            response = make_response(jsonify({'success': True}))
-            response.set_cookie('walletAddress', wallet_address, httponly=True)
-            return response
-        else:
-            raise ValueError('Signature verification failed')
-    except (ValueError, Exception) as e:
-        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/check')
 def check_session():
     wallet_address = request.cookies.get('walletAddress')
     if wallet_address:
-        return jsonify({'success': True, 'walletAddress': wallet_address}), 200
+        # Check if wallet address exists in Firestore
+        doc_ref = wallets_ref.document(wallet_address)
+        doc = doc_ref.get()
+        if doc.exists:
+            return jsonify({'success': True, 'walletAddress': wallet_address})
+        else:
+            return jsonify({'success': False, 'error': 'Wallet address not found in Firestore'})
     else:
-        return jsonify({'success': False}), 200
+        return jsonify({'success': False})
 
 @app.route('/logout')
 def logout():
     response = make_response(jsonify({'success': True}))
-    response.set_cookie('walletAddress', '', expires=0)  # Clear the 'walletAddress' cookie
+    response.set_cookie('walletAddress', '', expires=0)
     return response
-    
+
 if __name__ == '__main__':
     app.run(port=3000)

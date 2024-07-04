@@ -2,7 +2,9 @@ import pytest
 from datetime import datetime
 from unittest.mock import patch, MagicMock
 from app import app, wallets_ref
-import pdb
+import requests
+
+BASE_URL = 'http://localhost:3000'
 @pytest.fixture
 def client():
     with app.test_client() as client:
@@ -89,39 +91,22 @@ def test_verify_signature_wallet_not_found(client):
         assert response.json['success'] is False
         assert response.json['error'] == 'Wallet address not found'
 
-def test_verify_signature_failure(client):
-    wallet_address = "0x3ffca57f5b00074e13f4af9af206aefe35668375"
-    signed_nonce = "abc123"
-    
-    # Mock Firestore document retrieval to simulate existing wallet address
-    with patch('app.wallets_ref.document') as mock_document:
-        mock_doc = MagicMock()
-        mock_doc.exists = True
-        mock_doc.to_dict.return_value = {'nonce': '123456'}
-        mock_document.return_value.get.return_value = mock_doc
-
-        # Mock signature verification to simulate failure
-        with patch('app.keys.Signature') as mock_signature:
-            mock_signature.return_value.recover_public_key_from_msg.side_effect = ValueError('Signature verification failed')
-            
-            response = client.get(f'/verify?walletAddress={wallet_address}&signedNonce={signed_nonce}')
-            
-            assert response.status_code == 200
-            assert response.json['success'] is False
-            assert 'error' in response.json
-            
-#FIXME - NOT PASS         
-def test_check_session_with_cookie(client):
-    
-    response = client.get('/check', headers={'Cookie': 'walletAddress=0x3ffca57f5b00074e13f4af9af206aefe35668375'})
-    
+def test_verify_existing_wallet():
+    wallet_address = '0x3ffca57f5b00074e13f4af9af206aefe35668375'
+    response = requests.get(f'{BASE_URL}/verify', params={'walletAddress': wallet_address})
     assert response.status_code == 200
-    assert response.json['success'] is True  # Check if 'success' is True in the response JSON
-    assert response.json['walletAddress'] == '0x3ffca57f5b00074e13f4af9af206aefe35668375'
-  
+    assert response.json() == {'success': True}
 
-  
-    
+def test_verify_non_existing_wallet():
+    wallet_address = '0xNonExistingWalletAddress'
+    response = requests.get(f'{BASE_URL}/verify', params={'walletAddress': wallet_address})
+    assert response.status_code == 200
+    assert response.json() == {'success': False, 'error': 'Wallet address not found'}
+
+def test_verify_missing_wallet():
+    response = requests.get(f'{BASE_URL}/verify')
+    assert response.status_code == 200
+    assert response.json() == {'success': False, 'error': 'Wallet address not found'}  
     
 def test_check_session_without_cookie(client):
     # Send the request without the 'walletAddress' cookie

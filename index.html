@@ -51,23 +51,26 @@
 
       const web3 = new Web3(provider);
       const walletAddress = await web3.eth.getCoinbase();
-
+      console.log('walletAddress', walletAddress)
       // 3 - send the wallet address to the server
 
       const response1 = await fetch(`/nonce?walletAddress=${walletAddress}`);
-
+      console.log('// 3 - send the wallet address to the server, response1', response1)
       const { nonce } = await response1.json();
-
+      console.log('nonce', nonce)
       // 4 - get the nonce and sign it
 
       const signedNonce = await web3.eth.personal.sign(nonce, walletAddress);
-
+      console.log('signedNonce', signedNonce)
       // 5 - send the nonce to the server
 
       const response2 = await fetch(
         `/verify?walletAddress=${walletAddress}&signedNonce=${signedNonce}`
       );
+      console.log('// 5 - send the nonce to the server,response2 ', response2)
+      
       const { success } = await response2.json();
+      console.log('send the nonce to the server - success', success)
       await checkSession();
     });
 
@@ -80,8 +83,14 @@
     const checkSession = async () => {
       infoText.text("checking session!");
       const response = await fetch("/check");
+      console.log('response', response)
+    
       const data = await response.json();
       const { success, walletAddress } = data;
+      console.log('data', data)
+      console.log('success', success)
+      console.log('walletAddress', walletAddress)
+      
       if (success) {
         logoutButton.show();
         loginButton.hide();
@@ -94,4 +103,8 @@
     };
     checkSession();
   });
+  
+  
+  
+  
 </script>
