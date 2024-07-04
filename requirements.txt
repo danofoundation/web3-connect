@@ -1,5 +1,5 @@
 web3
-ython-dotenv
+python-dotenv
 eth_utils
 os
 json
@@ -9,3 +9,5 @@ eth-account
 eth-utils
 eth-keys 
 firebase-admin
+pytest
+requests

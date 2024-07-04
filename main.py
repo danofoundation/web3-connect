@@ -35,9 +35,6 @@ doc_ref.set({'wallet_address': walletAddress})
 
 print(doc_ref.id)
 
-
-
-
 infura_url = os.getenv('INFURA_URL')
 
 

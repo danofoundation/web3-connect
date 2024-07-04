@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
 from main import check_web3_connection
-
+from app import app, nonceList
 class TestWeb3Connection(unittest.TestCase):
 
     @patch('main.w3')
@@ -9,8 +9,6 @@ class TestWeb3Connection(unittest.TestCase):
         mock_w3.is_connected.return_value = True
         result = check_web3_connection()
         self.assertTrue(result)
-
-
 
 
 
