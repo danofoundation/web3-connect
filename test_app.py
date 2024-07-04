@@ -52,8 +52,6 @@ def test_generate_nonce_missing_wallet(client):
         # Assert that the wallet address is not in the random number part
         assert wallet_address not in random_number
 
-
-
 def test_verify_signature_success(client):
     wallet_address = "0x3ffca57f5b00074e13f4af9af206aefe35668375"
     signed_nonce = "abc123"
@@ -74,9 +72,7 @@ def test_verify_signature_success(client):
             assert response.status_code == 200
             assert response.json['success'] is True
             assert 'walletAddress' in response.headers['Set-Cookie']
-            
-            
-            
+                      
 def test_verify_signature_wallet_not_found(client):
     wallet_address = "0xnonexistentwallet"
     signed_nonce = "abc123"
@@ -107,6 +103,28 @@ def test_verify_missing_wallet():
     response = requests.get(f'{BASE_URL}/verify')
     assert response.status_code == 200
     assert response.json() == {'success': False, 'error': 'Wallet address not found'}  
+  
+def test_check_session_with_valid_cookie():
+    wallet_address = '0x3ffca57f5b00074e13f4af9af206aefe35668375'
+    cookies = {'walletAddress': wallet_address}
+    response = requests.get(f'{BASE_URL}/check', cookies=cookies)
+    
+    print(f'Response status code: {response.status_code}')
+    print(f'Response JSON: {response.json()}')
+    
+    assert response.status_code == 200
+    assert response.json() == {'success': True, 'walletAddress': wallet_address}
+    
+def test_check_session_with_invalid_cookie():
+    wallet_address = '0xInvalidWalletAddress'
+    cookies = {'walletAddress': wallet_address}
+    response = requests.get(f'{BASE_URL}/check', cookies=cookies)
+    
+    print(f'Response status code: {response.status_code}')
+    print(f'Response JSON: {response.json()}')
+    
+    assert response.status_code == 200
+    assert response.json() == {'success': False, 'error': 'Wallet address not found in Firestore'}
     
 def test_check_session_without_cookie(client):
     # Send the request without the 'walletAddress' cookie
