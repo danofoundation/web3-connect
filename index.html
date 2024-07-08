@@ -28,6 +28,126 @@
   </body>
 </html>
 <script>
+  jQuery(document).ready(async ($) => {
+    const infoText = $("#info");
+    const loginButton = $("#login");
+    const logoutButton = $("#logout");
+
+    // Function to connect MetaMask and perform login
+    const connectMetaMask = async () => {
+      try {
+        infoText.text("Connecting MetaMask...");
+
+        // 1 - Connect MetaMask with the frontend
+        const provider = await detectEthereumProvider();
+        if (!provider) {
+          throw new Error("MetaMask is not installed!");
+        }
+
+        await provider.enable();
+        infoText.text("MetaMask connected!");
+
+        // 2 - Get the wallet address from MetaMask
+        const web3 = new Web3(provider);
+        const walletAddress = await web3.eth.getCoinbase();
+        if (!walletAddress) {
+          throw new Error("Wallet address not found in MetaMask");
+        }
+
+        // 3 - Send the wallet address to the server to get a nonce
+        const response1 = await fetch(`/nonce?walletAddress=${walletAddress}`);
+        if (!response1.ok) {
+          throw new Error(`Error fetching nonce: ${response1.statusText}`);
+        }
+        const { nonce } = await response1.json();
+
+        // 4 - Sign the nonce with MetaMask
+        const signedNonce = await web3.eth.personal.sign(nonce, walletAddress);
+
+        // 5 - Send the signed nonce to the server for verification
+        const response2 = await fetch(
+          `/verify?walletAddress=${walletAddress}&signedNonce=${signedNonce}`
+        );
+        if (!response2.ok) {
+          throw new Error(`Error verifying signature: ${response2.statusText}`);
+        }
+        const { success } = await response2.json();
+
+        if (success) {
+          // If login successful, update UI and check session status
+          alert("Login successful!");
+          await checkSession();
+        } else {
+          throw new Error("Login failed");
+        }
+      } catch (error) {
+        // Handle errors and display messages
+        console.error("Error during MetaMask connection and login:", error);
+        infoText.text(`Error: ${error.message}`);
+      }
+    };
+
+    // Function to handle logout
+    const logout = async () => {
+      try {
+        infoText.text("Logging out, please wait...");
+        const response = await fetch("/logout");
+        if (!response.ok) {
+          throw new Error(`Error logging out: ${response.statusText}`);
+        }
+        await checkSession();
+      } catch (error) {
+        console.error("Error during logout:", error);
+        infoText.text(`Error: ${error.message}`);
+      }
+    };
+
+    // Function to check session status
+    const checkSession = async () => {
+      try {
+        infoText.text("Checking session...");
+
+        const response = await fetch("/check");
+        if (!response.ok) {
+          throw new Error(`Error checking session: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        const { success, walletAddress } = data;
+
+        if (success) {
+          // If logged in, update UI accordingly
+          logoutButton.show();
+          loginButton.hide();
+          infoText.text(`You are logged in with your wallet: ${walletAddress}`);
+        } else {
+          // If not logged in, update UI accordingly
+          logoutButton.hide();
+          loginButton.show();
+          infoText.text("You are currently not logged in with MetaMask");
+        }
+      } catch (error) {
+        console.error("Error checking session:", error);
+        infoText.text(`Error: ${error.message}`);
+      }
+    };
+
+    // Initial check of session status on page load
+    await checkSession();
+
+    // Event listener for login button
+    loginButton.on("click", async () => {
+      await connectMetaMask();
+    });
+
+    // Event listener for logout button
+    logoutButton.on("click", async () => {
+      await logout();
+    });
+  });
+</script>
+
+<!-- <script>
   jQuery(document).ready(($) => {
     const infoText = $("#info");
     const loginButton = $("#login");
@@ -107,4 +227,4 @@
   
   
   
-</script>
+</script> -->
