@@ -1,0 +1,21 @@
+{
+  "name": "web3-connect",
+  "version": "1.0.0",
+  "description": "Blockchain integration using web3, python",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "mocha"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "chai": "^5.1.1",
+    "fetch-mock": "^10.0.7",
+    "mocha": "^10.6.0",
+    "puppeteer": "^22.12.1",
+    "sinon": "^18.0.0"
+  }
+}

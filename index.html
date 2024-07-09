@@ -21,49 +21,65 @@
   <body>
     <h1>Login with metamask</h1>
     <div>
-      <p id="info"></p>
-      <button id="login">Login with metamask</button>
-      <button id="logout">Logout</button>
+      <a id="connect">Connect</a>
+      
     </div>
   </body>
 </html>
 <script>
-  jQuery(document).ready(async ($) => {
-    const infoText = $("#info");
-    const loginButton = $("#login");
-    const logoutButton = $("#logout");
+  jQuery.noConflict();
 
-    // Function to connect MetaMask and perform login
+  jQuery(document).ready(function($) {
+    const connectText = $("#connect");
+    let isConnected = false;
+
+    const toggleConnectDisconnect = async () => {
+        if (isConnected) {
+            await disconnect();
+            isConnected = false;
+            connectText.text("Connect");
+        } else {
+            await connectMetaMask();
+            if (isConnected) {
+                connectText.text("Disconnect");
+            } else {
+                connectText.text("Connect");
+            }
+        }
+    };
+
+    connectText.on("click", toggleConnectDisconnect);
+
     const connectMetaMask = async () => {
       try {
-        infoText.text("Connecting MetaMask...");
-
+        connectText.text("Connecting...");
+  
         // 1 - Connect MetaMask with the frontend
         const provider = await detectEthereumProvider();
         if (!provider) {
+          alert("Please install MetaMask");
           throw new Error("MetaMask is not installed!");
         }
-
-        await provider.enable();
-        infoText.text("MetaMask connected!");
-
+        
+        await provider.request({ method: 'eth_requestAccounts' });
+  
         // 2 - Get the wallet address from MetaMask
         const web3 = new Web3(provider);
         const walletAddress = await web3.eth.getCoinbase();
         if (!walletAddress) {
           throw new Error("Wallet address not found in MetaMask");
         }
-
+  
         // 3 - Send the wallet address to the server to get a nonce
         const response1 = await fetch(`/nonce?walletAddress=${walletAddress}`);
         if (!response1.ok) {
           throw new Error(`Error fetching nonce: ${response1.statusText}`);
         }
         const { nonce } = await response1.json();
-
+  
         // 4 - Sign the nonce with MetaMask
         const signedNonce = await web3.eth.personal.sign(nonce, walletAddress);
-
+  
         // 5 - Send the signed nonce to the server for verification
         const response2 = await fetch(
           `/verify?walletAddress=${walletAddress}&signedNonce=${signedNonce}`
@@ -72,159 +88,71 @@
           throw new Error(`Error verifying signature: ${response2.statusText}`);
         }
         const { success } = await response2.json();
-
+  
         if (success) {
-          // If login successful, update UI and check session status
-          alert("Login successful!");
+          console.log("Connect successful!");
+          isConnected = true;
           await checkSession();
         } else {
-          throw new Error("Login failed");
+          throw new Error("Connect failed");
         }
       } catch (error) {
-        // Handle errors and display messages
-        console.error("Error during MetaMask connection and login:", error);
-        infoText.text(`Error: ${error.message}`);
+        if (error.code === 4001) {
+          console.error("User rejected the request:", error);
+        } else {
+          console.error("Error during MetaMask connection and login:", error);
+        }
+        connectText.text("Connect");
+        isConnected = false;
       }
     };
-
-    // Function to handle logout
-    const logout = async () => {
+    
+    const disconnect = async () => {
       try {
-        infoText.text("Logging out, please wait...");
-        const response = await fetch("/logout");
+        const response = await fetch("/disconnect");
         if (!response.ok) {
-          throw new Error(`Error logging out: ${response.statusText}`);
+          throw new Error(`Error disconnecting: ${response.statusText}`);
         }
-        await checkSession();
+        console.log("Disconnected successfully");
+        connectText.text("Connect");
+        isConnected = false;
       } catch (error) {
-        console.error("Error during logout:", error);
-        infoText.text(`Error: ${error.message}`);
+        console.error("Error during disconnect:", error);
       }
     };
-
-    // Function to check session status
+    
     const checkSession = async () => {
       try {
-        infoText.text("Checking session...");
-
+        console.log("Checking session...");
         const response = await fetch("/check");
         if (!response.ok) {
           throw new Error(`Error checking session: ${response.statusText}`);
         }
-
+  
         const data = await response.json();
         const { success, walletAddress } = data;
-
+        
         if (success) {
-          // If logged in, update UI accordingly
-          logoutButton.show();
-          loginButton.hide();
-          infoText.text(`You are logged in with your wallet: ${walletAddress}`);
+          connectText.text('Disconnect');
+          isConnected = true;
         } else {
-          // If not logged in, update UI accordingly
-          logoutButton.hide();
-          loginButton.show();
-          infoText.text("You are currently not logged in with MetaMask");
+          connectText.text("Connect");
+          isConnected = false;
         }
       } catch (error) {
         console.error("Error checking session:", error);
-        infoText.text(`Error: ${error.message}`);
+        connectText.text("Connect");
+        isConnected = false;
       }
     };
-
-    // Initial check of session status on page load
-    await checkSession();
-
-    // Event listener for login button
-    loginButton.on("click", async () => {
-      await connectMetaMask();
-    });
-
-    // Event listener for logout button
-    logoutButton.on("click", async () => {
-      await logout();
-    });
+    
+    (async () => {
+      try {
+        await checkSession();
+      } catch (error) {
+        console.error("Error during session check:", error);
+      }
+    })();
   });
 </script>
 
-<!-- <script>
-  jQuery(document).ready(($) => {
-    const infoText = $("#info");
-    const loginButton = $("#login");
-    const logoutButton = $("#logout");
-
-    loginButton.on("click", async () => {
-      // 1 - connect metamask with the frontend
-
-      infoText.text("connecting metamask!!");
-
-      const provider = await detectEthereumProvider();
-
-      if (!provider) {
-        return infoText.text("metamask is not installed!!!");
-      }
-
-      await provider.enable();
-      infoText.text("metamask connected!!");
-
-      // 2 - get the wallet address from metamask
-
-      const web3 = new Web3(provider);
-      const walletAddress = await web3.eth.getCoinbase();
-      console.log('walletAddress', walletAddress)
-      // 3 - send the wallet address to the server
-
-      const response1 = await fetch(`/nonce?walletAddress=${walletAddress}`);
-      console.log('// 3 - send the wallet address to the server, response1', response1)
-      const { nonce } = await response1.json();
-      console.log('nonce', nonce)
-      // 4 - get the nonce and sign it
-
-      const signedNonce = await web3.eth.personal.sign(nonce, walletAddress);
-      console.log('signedNonce', signedNonce)
-      // 5 - send the nonce to the server
-
-      const response2 = await fetch(
-        `/verify?walletAddress=${walletAddress}&signedNonce=${signedNonce}`
-      );
-      console.log('// 5 - send the nonce to the server,response2 ', response2)
-      
-      const { success } = await response2.json();
-      console.log('send the nonce to the server - success', success)
-      await checkSession();
-    });
-
-    logoutButton.on("click", async () => {
-      infoText.text("Logging out, please wait!");
-      const response = await fetch("/logout");
-      await checkSession();
-    });
-
-    const checkSession = async () => {
-      infoText.text("checking session!");
-      const response = await fetch("/check");
-      console.log('response', response)
-    
-      const data = await response.json();
-      const { success, walletAddress } = data;
-      console.log('data', data)
-      console.log('success', success)
-      console.log('walletAddress', walletAddress)
-      
-      if (success) {
-        logoutButton.show();
-        loginButton.hide();
-        infoText.text("You are logged in with your wallet: " + walletAddress);
-      } else {
-        logoutButton.hide();
-        loginButton.show();
-        infoText.text("You are currently not logged in with metamask");
-      }
-    };
-    checkSession();
-  });
-  
-  
-  
-  
-</script> -->
